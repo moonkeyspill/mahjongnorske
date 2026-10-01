@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🀄 Kroppsdel-Mahjong</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    font-family: "Trebuchet MS", Arial, sans-serif;
+    color: #17324d;
+    background: radial-gradient(circle at top, #dff6ff 0%, #b8e6f5 35%, #7cc9df 100%);
+}
+
+.game {
+    width: 100%;
+    max-width: 950px;
+    text-align: center;
+}
+
+h1 {
+    margin: 5px 0;
+    font-size: clamp(28px, 6vw, 48px);
+    color: #164a68;
+    text-shadow: 2px 2px white;
+}
+
+.subtitle {
+    margin: 0 0 15px;
+    font-size: 17px;
+    color: #31566d;
+}
+
+.info {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.info-box {
+    min-width: 120px;
+    padding: 10px 18px;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.12);
+    font-weight: bold;
+}
+
+.info-box span {
+    display: block;
+    font-size: 22px;
+    color: #19779c;
+}
+
+.instructions {
+    max-width: 700px;
+    margin: 0 auto 18px;
+    padding: 12px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.1);
+}
+
+.instructions strong {
+    color: #d45b7a;
+}
+
+/* Keep a 4-column layout and center the final two tiles. */
+.board {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    max-width: 850px;
+    margin: 0 auto;
+    perspective: 1000px;
+}
+
+.board .tile:nth-last-child(2) {
+    grid-column: 2;
+}
+
+.board .tile:last-child {
+    grid-column: 3;
+}
+
+.tile {
+    position: relative;
+    min-width: 0;
+    min-height: 110px;
+    padding: 8px;
+    border: 0;
+    border-radius: 17px;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    perspective: 800px;
+}
+
+.tile-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 17px;
+    transform-style: preserve-3d;
+    transition: transform 0.45s ease;
+}
+
+.tile.flipped .tile-inner,
+.tile.matched .tile-inner {
+    transform: rotateY(180deg);
+}
+
+.tile-face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 3px solid #fff;
+    border-radius: 17px;
+    box-shadow: 0 7px 0 #91b9c7, 0 10px 18px rgba(0, 0, 0, 0.15);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Norwegian flag back: red field, white cross, blue cross. */
+.tile-back {
+    background:
+        linear-gradient(to right,
+            transparent 0 30%,
+            #fff 30% 39%,
+            #0052b4 39% 46%,
+            #fff 46% 55%,
+            transparent 55% 100%),
+        linear-gradient(to bottom,
+            transparent 0 38%,
+            #fff 38% 46%,
+            #0052b4 46% 58%,
+            #fff 58% 66%,
+            transparent 66% 100%),
+        #ba0c2f;
+}
+
+.tile-back::after {
+    content: "✦";
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 25px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.tile-front {
+    transform: rotateY(180deg);
+    background: linear-gradient(145deg, #fff, #e8f5fa);
+    color: #21465b;
+    font-weight: bold;
+}
+
+.tile.word .tile-front {
+    font-size: clamp(15px, 3.3vw, 28px);
+}
+
+.tile.picture .tile-front {
+    font-size: clamp(32px, 7vw, 64px);
+}
+
+.tile:not(.matched):hover .tile-inner {
+    transform: translateY(-3px);
+}
+
+.tile.flipped:hover .tile-inner,
+.tile.matched:hover .tile-inner {
+    transform: rotateY(180deg);
+}
+
+.tile:focus-visible {
+    outline: 4px solid #ffca3a;
+    outline-offset: 4px;
+}
+
+.tile.matched {
+    cursor: default;
+    opacity: 0.72;
+}
+
+.tile.wrong .tile-front {
+    background: #ffd6d6;
+    animation: shake 0.35s;
+}
+
+.buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 25px;
+}
+
+button.game-button {
+    padding: 12px 22px;
+    border: 0;
+    border-radius: 14px;
+    background: #176b89;
+    box-shadow: 0 5px 0 #0c465c;
+    color: white;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: bold;
+    transition: 0.15s;
+}
+
+button.game-button:hover {
+    transform: translateY(-2px);
+    background: #2084a6;
+}
+
+button.game-button:active {
+    transform: translateY(3px);
+    box-shadow: 0 2px 0 #0c465c;
+}
+
+.message {
+    min-height: 35px;
+    margin-top: 18px;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.win {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 45, 65, 0.82);
+}
+
+.win-card {
+    width: 100%;
+    max-width: 450px;
+    padding: 35px 25px;
+    border-radius: 25px;
+    background: white;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    animation: pop 0.45s ease;
+}
+
+.win-card h2 {
+    margin: 0 0 10px;
+    color: #176b89;
+    font-size: 36px;
+}
+
+.win-card p {
+    font-size: 20px;
+    line-height: 1.5;
+}
+
+.confetti {
+    position: fixed;
+    top: -20px;
+    z-index: 20;
+    pointer-events: none;
+    font-size: 25px;
+    animation: fall 2.5s linear forwards;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    50% { transform: translateX(8px); }
+    75% { transform: translateX(-8px); }
+}
+
+@keyframes fall {
+    to {
+        transform: translateY(110vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+@keyframes pop {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 12px;
+    }
+
+    .board {
+        gap: 8px;
+    }
+
+    .tile {
+        min-height: 82px;
+        padding: 4px;
+    }
+
+    .instructions {
+        font-size: 14px;
+    }
+
+    .tile-face {
+        border-radius: 12px;
+    }
+}
+
+@media (max-width: 360px) {
+    .tile {
+        min-height: 68px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+</style>
+</head>
+
+<body>
+<main class="game">
+    <h1>🀄 Kroppsdel-Mahjong</h1>
+    <p class="subtitle">Lær norske ord for kroppsdeler 🧠🇳🇴</p>
+
+    <div class="info">
+        <div class="info-box">⭐ Poeng<span id="score">0</span></div>
+        <div class="info-box">❤️ Forsøk<span id="mistakes">0</span></div>
+        <div class="info-box">🧩 Par<span id="pairs">0 / 11</span></div>
+    </div>
+
+    <div class="instructions">
+        <strong>Slik spiller du:</strong><br>
+        Klikk på to brikker for å snu dem. Finn det norske ordet og bildet som passer sammen.
+    </div>
+
+    <div id="board" class="board" aria-label="Spillebrett"></div>
+    <div id="message" class="message" aria-live="polite"></div>
+
+    <div class="buttons">
+        <button class="game-button" id="newGameButton" type="button">🔄 Nytt spill</button>
+        <button class="game-button" id="showWordsButton" type="button">📚 Se ordene</button>
+    </div>
+</main>
+
+<div id="winScreen" class="win" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <div class="win-card">
+        <h2 id="winTitle">🎉 Gratulerer!</h2>
+        <p>Du fant alle kroppsdelene! 🧠🫀🫁</p>
+        <p>
+            ⭐ Poeng: <strong id="finalScore">0</strong><br>
+            ❤️ Forsøk: <strong id="finalMistakes">0</strong>
+        </p>
+        <button class="game-button" id="playAgainButton" type="button">🀄 Spill igjen</button>
+    </div>
+</div>
+
+<script>
+"use strict";
+
+const bodyParts = [
+    { word: "hånd", emoji: "🖐🏽" },
+    { word: "fot", emoji: "🦶" },
+    { word: "bein", emoji: "🦵🏽" },
+    { word: "øre", emoji: "👂🏼" },
+    { word: "hjerte", emoji: "🫀" },
+    { word: "lunge", emoji: "🫁" },
+    { word: "hjerne", emoji: "🧠" },
+    { word: "nese", emoji: "👃🏼" },
+    { word: "tann", emoji: "🦷" },
+    { word: "øye", emoji: "👀" },
+    { word: "munn", emoji: "👄" }
+];
+
+const board = document.getElementById("board");
+const scoreDisplay = document.getElementById("score");
+const mistakesDisplay = document.getElementById("mistakes");
+const pairsDisplay = document.getElementById("pairs");
+const message = document.getElementById("message");
+const winScreen = document.getElementById("winScreen");
+
+let selectedTile = null;
+let score = 0;
+let mistakes = 0;
+let matchedPairs = 0;
+let locked = false;
+let turnTimer;
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const randomIndex = Math.floor(Math.random() * (i + 1));
+        [array[i], array[randomIndex]] = [array[randomIndex], array[i]];
+    }
+    return array;
+}
+
+function createTile(tileData) {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = `tile ${tileData.type}`;
+    tile.dataset.pair = String(tileData.pair);
+    tile.dataset.type = tileData.type;
+    tile.setAttribute("aria-label", "Skjult brikke");
+
+    const inner = document.createElement("span");
+    inner.className = "tile-inner";
+
+    const back = document.createElement("span");
+    back.className = "tile-face tile-back";
+    back.setAttribute("aria-hidden", "true");
+
+    const front = document.createElement("span");
+    front.className = "tile-face tile-front";
+    front.textContent = tileData.value;
+    front.setAttribute("aria-hidden", "true");
+
+    inner.append(back, front);
+    tile.appendChild(inner);
+    tile.addEventListener("click", () => selectTile(tile));
+
+    return tile;
+}
+
+function createBoard() {
+    clearTimeout(turnTimer);
+    board.replaceChildren();
+    selectedTile = null;
+    locked = false;
+
+    const tiles = [];
+    bodyParts.forEach((part, index) => {
+        tiles.push({ type: "word", value: part.word, pair: index });
+        tiles.push({ type: "picture", value: part.emoji, pair: index });
+    });
+
+    shuffle(tiles).forEach(tileData => board.appendChild(createTile(tileData)));
+}
+
+function flip(tile, isFaceUp) {
+    tile.classList.toggle("flipped", isFaceUp);
+    tile.setAttribute("aria-label", isFaceUp
+        ? `${tile.dataset.type === "word" ? "Ord" : "Bilde"}: ${tile.querySelector(".tile-front").textContent}`
+        : "Skjult brikke");
+}
+
+function selectTile(tile) {
+    if (locked || tile.classList.contains("matched") || tile === selectedTile) return;
+
+    flip(tile, true);
+
+    if (!selectedTile) {
+        selectedTile = tile;
+        showMessage("🔎 Finn brikken som passer!");
+        return;
+    }
+
+    const firstTile = selectedTile;
+    const isMatch =
+        tile.dataset.pair === firstTile.dataset.pair &&
+        tile.dataset.type !== firstTile.dataset.type;
+
+    if (isMatch) {
+        locked = true;
+        score += 10;
+        matchedPairs++;
+        scoreDisplay.textContent = score;
+        pairsDisplay.textContent = `${matchedPairs} / ${bodyParts.length}`;
+        showMessage("🎉 Riktig! Bra jobbet!");
+
+        turnTimer = setTimeout(() => {
+            tile.classList.add("matched");
+            firstTile.classList.add("matched");
+            tile.disabled = true;
+            firstTile.disabled = true;
+            selectedTile = null;
+            locked = false;
+
+            if (matchedPairs === bodyParts.length) {
+                showWin();
+            }
+        }, 350);
+
+        return;
+    }
+
+    locked = true;
+    mistakes++;
+    score = Math.max(0, score - 2);
+    scoreDisplay.textContent = score;
+    mistakesDisplay.textContent = mistakes;
+    tile.classList.add("wrong");
+    firstTile.classList.add("wrong");
+    showMessage("❌ Ikke helt! Prøv igjen.");
+
+    turnTimer = setTimeout(() => {
+        flip(tile, false);
+        flip(firstTile, false);
+        tile.classList.remove("wrong");
+        firstTile.classList.remove("wrong");
+        selectedTile = null;
+        locked = false;
+    }, 900);
+}
+
+function showMessage(text) {
+    message.textContent = text;
+}
+
+function newGame() {
+    clearTimeout(turnTimer);
+    score = 0;
+    mistakes = 0;
+    matchedPairs = 0;
+    selectedTile = null;
+    locked = false;
+
+    scoreDisplay.textContent = "0";
+    mistakesDisplay.textContent = "0";
+    pairsDisplay.textContent = `0 / ${bodyParts.length}`;
+    winScreen.style.display = "none";
+    showMessage("🀄 Finn alle parene!");
+    createBoard();
+}
+
+function showWin() {
+    document.getElementById("finalScore").textContent = score;
+    document.getElementById("finalMistakes").textContent = mistakes;
+    winScreen.style.display = "flex";
+    createConfetti();
+}
+
+function createConfetti() {
+    const emojis = ["🎉", "⭐", "💙", "🧠", "🫀", "🫁", "🇳🇴"];
+
+    for (let i = 0; i < 35; i++) {
+        const confetti = document.createElement("div");
+        confetti.className = "confetti";
+        confetti.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        confetti.style.left = `${Math.random() * 100}vw`;
+        confetti.style.animationDelay = `${Math.random() * 1.5}s`;
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 4000);
+    }
+}
+
+function showWords() {
+    const list = bodyParts.map(part => `${part.emoji}  ${part.word}`).join("\n");
+    alert(`📚 Norske kroppsdeler\n\n${list}`);
+}
+
+document.getElementById("newGameButton").addEventListener("click", newGame);
+document.getElementById("showWordsButton").addEventListener("click", showWords);
+document.getElementById("playAgainButton").addEventListener("click", newGame);
+
+newGame();
+</script>
+</body>
+</html>
+
